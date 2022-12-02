@@ -1,6 +1,6 @@
 use std::fs;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum Choices {
     Rock,
     Paper,
@@ -8,6 +8,10 @@ enum Choices {
 }
 
 impl Choices {
+    fn all() -> [Self; 3] {
+        [Self::Rock, Self::Paper, Self::Scissors]
+    }
+
     fn score(&self) -> u32 {
         match *self {
             Self::Rock => 1,
@@ -29,6 +33,13 @@ impl Choices {
         }
     }
 
+    fn get_my_play_for_result(opponent: &Self, desired_result: RoundResult) -> Self {
+        *Self::all()
+            .iter()
+            .find(|choice| choice.play_against(opponent) == desired_result)
+            .unwrap()
+    }
+
     fn from_abc(c: char) -> Self {
         match c {
             'A' => Self::Rock,
@@ -48,7 +59,7 @@ impl Choices {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 enum RoundResult {
     Win,
     Lose,
@@ -61,6 +72,15 @@ impl RoundResult {
             Self::Win => 6,
             Self::Draw => 3,
             Self::Lose => 0,
+        }
+    }
+
+    fn from_xyz(c: char) -> Self {
+        match c {
+            'X' => Self::Lose,
+            'Y' => Self::Draw,
+            'Z' => Self::Win,
+            _ => panic!(),
         }
     }
 }
@@ -83,12 +103,11 @@ fn score_strategy(strat: &str) -> u32 {
             let trimmed = s.trim();
             println!("Parsing score for string {trimmed}");
             let opponent_char = trimmed.chars().next().unwrap();
-            let my_char = trimmed.chars().last().unwrap();
+            let result_char = trimmed.chars().last().unwrap();
 
-            let my_play = Choices::from_xyz(my_char);
             let opponent_play = Choices::from_abc(opponent_char);
-
-            let result = my_play.play_against(&opponent_play);
+            let result = RoundResult::from_xyz(result_char);
+            let my_play = Choices::get_my_play_for_result(&opponent_play, result);
 
             let total_score = my_play.score() + result.score();
 
@@ -109,7 +128,7 @@ mod tests {
         const DATA: &str = "A Y
                             B X
                             C Z";
-        const EXPECTED: u32 = 15;
+        const EXPECTED: u32 = 12;
         let actual = score_strategy(DATA);
 
         assert_eq!(actual, EXPECTED);
@@ -121,7 +140,7 @@ mod tests {
                             B X
                             A Z
                             C Z";
-        const EXPECTED: u32 = 18;
+        const EXPECTED: u32 = 20;
         let actual = score_strategy(DATA);
 
         assert_eq!(actual, EXPECTED);
