@@ -1,12 +1,10 @@
-use std::ops::RangeInclusive;
-
 fn main() {
     println!("Hello Day 4!");
 
     let input = std::fs::read_to_string("src/data/day4.txt").unwrap();
     let result = count_containments(&input);
 
-    println!("There were {result} full containments in the given dataset.");
+    println!("There were {result} partial containments in the given dataset.");
 }
 
 fn count_containments(input: &str) -> usize {
@@ -17,10 +15,7 @@ fn count_containments(input: &str) -> usize {
             s.split(',')
                 .map(|s| {
                     s.split('-')
-                        .map(|s| {
-                            println!("Parsing {s}");
-                            s.trim().parse::<usize>().unwrap()
-                        })
+                        .map(|s| s.trim().parse::<usize>().unwrap())
                         .collect::<Vec<usize>>()
                 })
                 .collect::<Vec<Vec<usize>>>()
@@ -29,13 +24,16 @@ fn count_containments(input: &str) -> usize {
             let (start_1, end_1) = (s[0][0], s[0][1]);
             let (start_2, end_2) = (s[1][0], s[1][1]);
 
-            check_full_containment(start_1, end_1, start_2, end_2)
+            check_partial_containment(start_1, end_1, start_2, end_2)
         })
         .count()
 }
 
-fn check_full_containment(start_1: usize, end_1: usize, start_2: usize, end_2: usize) -> bool {
-    (start_1 <= start_2 && end_1 >= end_2) || (start_2 <= start_1 && end_2 >= end_1)
+fn check_partial_containment(start_1: usize, end_1: usize, start_2: usize, end_2: usize) -> bool {
+    (start_1 >= start_2 && start_1 <= end_2)
+        || (end_1 >= start_2 && end_1 <= end_2)
+        || (start_1 <= start_2 && end_1 >= end_2)
+        || (start_2 <= start_1 && end_2 >= end_1)
 }
 
 #[cfg(test)]
@@ -44,14 +42,20 @@ mod tests {
 
     #[test]
     fn test_full_containment() {
-        assert!(check_full_containment(2, 8, 3, 7));
-        assert!(check_full_containment(3, 7, 2, 8));
+        assert!(check_partial_containment(2, 8, 3, 7));
+        assert!(check_partial_containment(3, 7, 2, 8));
+    }
+
+    #[test]
+    fn test_partial_containment() {
+        assert!(check_partial_containment(2, 5, 3, 7));
+        assert!(check_partial_containment(3, 7, 6, 8));
     }
 
     #[test]
     fn test_no_containment() {
-        assert!(!check_full_containment(2, 8, 10, 14));
-        assert!(!check_full_containment(3, 7, 0, 2));
+        assert!(!check_partial_containment(2, 8, 10, 14));
+        assert!(!check_partial_containment(3, 7, 0, 2));
     }
 
     #[test]
@@ -64,7 +68,7 @@ mod tests {
 2-6,4-8";
 
         let actual = count_containments(DATA);
-        const EXPECTED: usize = 2;
+        const EXPECTED: usize = 4;
 
         assert_eq!(actual, EXPECTED);
     }
@@ -80,7 +84,7 @@ mod tests {
 2-6,4-8";
 
         let actual = count_containments(DATA);
-        const EXPECTED: usize = 3;
+        const EXPECTED: usize = 5;
 
         assert_eq!(actual, EXPECTED);
     }
