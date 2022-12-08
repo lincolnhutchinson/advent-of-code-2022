@@ -5,9 +5,22 @@ fn main() {
 
     let input = std::fs::read_to_string("src/data/day7.txt").unwrap();
     let lines = split_input_to_lines(&input);
-    let result = total_dirs_under_threshold(&lines, THRESHOLD);
+    let mut get_flat_dirs = flat_dir_sizes_recursive(&lines, 1);
+    let total_used_space = get_flat_dirs.last().unwrap();
+    let remaining_space = 70000000 - total_used_space;
+    let needed_space = 30000000 - remaining_space;
 
-    println!("Final Result: {result}");
+    println!("Total used space: {total_used_space}");
+    println!("Remaining Space on Disk: {remaining_space}");
+    println!("I need at least: {needed_space} to be freed");
+
+    println!("{get_flat_dirs:?}");
+    for size in get_flat_dirs {
+        if size >= needed_space {
+            println!("{size}");
+            return;
+        }
+    }
 }
 
 fn split_input_to_lines(input: &str) -> Vec<&str> {
@@ -26,6 +39,52 @@ impl DirSizeInfo {
             children_under_threshold_total_size: 0,
         }
     }
+}
+
+fn flat_dir_sizes_recursive(lines: &Vec<&str>, start_idx: usize) -> Vec<usize> {
+    let mut result = Vec::new();
+    let mut nesting_level = 1;
+    let mut my_size: usize = 0;
+
+    for idx in start_idx..lines.len() {
+        let line = lines[idx].trim();
+
+        if line == "$ cd .." {
+            nesting_level -= 1;
+
+            if nesting_level == 0 {
+                break;
+            } else {
+                continue;
+            }
+        }
+
+        if line.chars().next().unwrap().is_numeric() {
+            if nesting_level == 1 {
+                let size = line
+                    .split_whitespace()
+                    .next()
+                    .unwrap()
+                    .parse::<usize>()
+                    .unwrap();
+                my_size += size;
+            }
+        } else if line.starts_with("$ cd") {
+            if nesting_level == 1 {
+                let mut child_dir = flat_dir_sizes_recursive(lines, idx + 1);
+
+                my_size += child_dir.last().unwrap();
+
+                result.append(&mut child_dir);
+            }
+
+            nesting_level += 1;
+        }
+    }
+
+    result.push(my_size);
+    result.sort();
+    result
 }
 
 fn total_dirs_under_threshold(lines: &Vec<&str>, threshold: usize) -> usize {
@@ -127,6 +186,17 @@ $ ls
 400 c.dat
 ";
 
+    const NESTING_DIRS_EXAMPLE: &str = "$ cd /
+$ ls
+dir h
+200 b.txt
+400 c.dat
+$ cd dir h
+$ ls
+500 r.dangit
+1000 b.dangit
+";
+
     #[test]
     fn test_single_dir() {
         let lines = split_input_to_lines(SINGLE_DIR_EXAMPLE);
@@ -143,5 +213,34 @@ $ ls
         let expected = 95437;
 
         assert_eq!(total, expected);
+    }
+
+    #[test]
+    fn test_flat_dir_single() {
+        let lines = split_input_to_lines(SINGLE_DIR_EXAMPLE);
+        let flat_single_dir = flat_dir_sizes_recursive(&lines, 1);
+        let expected = vec![600];
+
+        assert_eq!(flat_single_dir, expected);
+    }
+
+    #[test]
+    fn test_flat_dir_example() {
+        let lines = split_input_to_lines(EXAMPLE_INPUT);
+        let flat_example = flat_dir_sizes_recursive(&lines, 1);
+
+        let expected = vec![584, 94853, 24933642, 48381165];
+
+        assert_eq!(flat_example, expected);
+    }
+
+    #[test]
+    fn test_flat_dir_nesting() {
+        let lines = split_input_to_lines(NESTING_DIRS_EXAMPLE);
+        let actual = flat_dir_sizes_recursive(&lines, 1);
+
+        let expected = vec![1500, 2100];
+
+        assert_eq!(actual, expected);
     }
 }
